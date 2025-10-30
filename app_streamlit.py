@@ -6,10 +6,10 @@ from datetime import datetime
 from playwright.sync_api import sync_playwright
 import streamlit as st
 
-st.set_page_config(page_title="Extractor (Dates + Custom Fields)", page_icon="🧲", layout="wide")
+st.set_page_config(page_title="Extractor date de actualizare", page_icon="🧲", layout="wide")
 
-st.title("🧲 Last Updated + Custom Fields Extractor")
-st.caption("Extrage data ultimei actualizări **și** câmpuri personalizate (ex: 'Written By' → autor).")
+st.title("🧲 Extractor pentru data ultimei actualizări")
+st.caption("Aplicație Streamlit care extrage rapid data ultimei actualizări pentru liste de linkuri.")
 
 # -------------------------------
 # Date parsing helpers (RO + EN)
@@ -412,45 +412,26 @@ def run_extraction(df, url_col, limit, offset, published_fallback=False, debug=F
 # Sidebar controls
 # -------------------------------
 with st.sidebar:
-    st.header("Setări - Last Updated")
+    st.header("Setări - Ultima actualizare")
     limit = st.number_input("Limită (câte linkuri să procesez)", min_value=0, value=50, step=1, help="0 înseamnă fără limită")
     offset = st.number_input("Offset (de unde să încep)", min_value=0, value=0, step=1)
-    published_fallback = st.checkbox("Folosește data publicării dacă 'Last Updated' lipsește (fallback explicit)", value=False)
-    disallow_same = st.checkbox("Ignoră 'Last Updated' dacă e identică cu data publicării", value=True)
+    published_fallback = st.checkbox("Folosește data publicării dacă „Last Updated” lipsește (rezervă explicită)", value=False)
+    disallow_same = st.checkbox("Ignoră „Last Updated” dacă este identică cu data publicării", value=True)
     debug = st.checkbox("Debug (include fragmente de text în erori)", value=False)
     sleep_between = st.slider("Pauză între URL-uri (secunde)", 0.0, 2.0, 0.15, 0.05)
 
     st.divider()
-    st.subheader("Căutare 'Last Updated' personalizată (etichete)")
+    st.subheader("Căutare personalizată pentru textul „Last Updated” (etichete)")
     custom_keywords = st.text_area(
-        "Cuvinte/expresii pentru detecția 'Last Updated' (separate prin virgulă sau linie nouă)",
+        "Cuvinte/expresii pentru detectarea textului „Last Updated” (separate prin virgulă sau linie nouă)",
         value="Last Updated, Updated, Reviewed, Actualizat, Revizuit",
-        help="Se caută aceste etichete urmate de o dată. Acceptă și regex-uri simple (literal escaped)."
+        help="Se caută aceste etichete urmate de o dată. Acceptă și expresii regulate simple (caractere speciale scăpate cu backslash)."
     )
     custom_selectors = st.text_input(
         "Selectori CSS (opțional, separați prin virgulă)",
         value="",
-        help="Ex: .meta, .entry-meta, header.article-header. Dacă e gol, caută în tot documentul."
+        help="Exemplu: .meta, .entry-meta, header.article-header. Dacă este gol, caută în tot documentul."
     )
-
-    st.divider()
-    st.header("Câmpuri personalizate (label → valoare)")
-    kv_lines = st.text_area(
-        "Mapări field=Label (unul pe linie)",
-        value="author=Written By",
-        help="Ex: 'author=Written By' va extrage numele după eticheta 'Written By'. Dacă scrii doar 'author', va căuta și label 'author'."
-    )
-    kv_selectors_text = st.text_input(
-        "Selectori CSS pentru câmpuri (opțional)",
-        value="",
-        help="Ex: .byline, .entry-meta. Dacă e gol, caută în tot documentul."
-    )
-    kv_value_regex = st.text_input(
-        "Pattern valoare (regex opțional)",
-        value=r"[A-Z][A-Za-z0-9 .,'’\-–—]+",
-        help="Default potrivit pentru nume/șiruri; ajustează-l dacă vrei capturi mai precise."
-    )
-    try_jsonld_author = st.checkbox("Încearcă autor din JSON-LD (dacă 'author' sau 'written_by' e cerut)", value=True)
 
 # -------------------------------
 # Input area (Excel sau listă manuală)
@@ -492,9 +473,7 @@ if df_input is not None and url_column_name:
                 df_input, url_column_name, limit, offset,
                 published_fallback, debug, sleep_between,
                 custom_keywords=custom_keywords, custom_selectors=custom_selectors,
-                disallow_same_as_published=disallow_same,
-                kv_lines=kv_lines, kv_selectors_text=kv_selectors_text,
-                kv_value_regex=kv_value_regex, try_jsonld_author=try_jsonld_author
+                disallow_same_as_published=disallow_same
             )
         st.success("Gata! Vezi rezultatele mai jos.")
         st.dataframe(out_df)
@@ -505,5 +484,3 @@ if df_input is not None and url_column_name:
             out_df.to_excel(buf, index=False)
         buf.seek(0)
         st.download_button("Descarcă Excel cu rezultate", data=buf, file_name="extraction_results.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-st.info("Sugestie: pe Linux/CI, rulează: `playwright install chromium` și (opțional) `playwright install-deps` înainte de a porni aplicația.")
